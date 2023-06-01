@@ -1,8 +1,8 @@
 version: '3'
 
 services:
-  api:
+  app:
     build: .
-    image: fastapi-demo
+    image: public.ecr.aws/n0a5h1f4/demo-projects:latest-arm64
     ports:
-      - "8001:8001"
+      - "80:80"

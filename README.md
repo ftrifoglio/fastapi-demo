@@ -1,45 +1,29 @@
 # Machine Learning microservice with FastAPI
 
-Simple application with API endpoints to interact with machine learning models trained on the Titanic dataset.
+App to interact with machine learning models trained on the Titanic dataset.
 
-There are 2 versions (`/v1` and `/v2`) each with two endpoints: `/predict` and `/score`.
+There are 2 versions (`/v1` and `/v2`) each with two API endpoints: `/predict` and `/score`.
 
-`/v1` features a regularized logistic model. 
+`/v1` features a regularized logistic model. `/v2` features a random forest model. `/predict` returns the predicted probability of survival. `/score` returns some test set metrics of the model (ie ROC AUC, accuracy and recall).
 
-`/v2` features a random forest model.
+## Live demo
 
-`/predict` returns the predicted probability of survival.
+The app is currently (and hopefully) live on AWS ECS (Amazon Elastic Container Service)
 
-`/score` returns some test set metrics of the model (ie ROC AUC, accuracy and recall).
+http://fastapi-demo-nlb-75e7fb7d6638b195.elb.eu-west-1.amazonaws.com
 
 ## Usage
 
-Build and launch the app with
+Build and spin up the app locally using Docker
 
 ```
-docker-compose up
-```
-
-Send a POST request to the `/predict` endpoint
-
-```
-curl -X 'POST' \
-  'http://localhost:8001/api/latest/predict/' \
-  -H 'accept: application/json' \
-  -H 'Content-Type: application/json' \
-  -d '{
-  "Age": 16,
-  "SibSp": 1,
-  "Parch": 2,
-  "Sex": "male",
-  "Embarked": "C",
-  "Pclass": 1
-}'
+$ git clone https://github.com/fedassembly/fastapi-demo.git
+$ cd fastapi-demo
+$ make venv  # works on MacOS only
+$ docker-compose up
 ```
 
 ## Roadmap
 
 - Add unit tests to `titanic_model` and `api_utils`
-- Add logging (inspo: https://github.com/kurtispykes/car-evaluation-project)
-- Make the image smaller
 - Add CI/CD

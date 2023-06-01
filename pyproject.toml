@@ -1,16 +1,16 @@
 [tool.poetry]
 name = "fastapi-demo"
 version = "1.0.0"
-description = "Simple application with API endpoints to interact with machine learning models trained on the Titanic dataset."
+description = "App to interact with machine learning models trained on the Titanic dataset"
 authors = ["Federico Trifoglio <federico.trifoglio@assemblyglobal.com>"]
 readme = "README.md"
 
 [tool.poetry.dependencies]
 python = "^3.11"
+fastapi = "^0.95.2"
 uvicorn = {extras = ["standard"], version = "^0.22.0"}
-requests = "^2.20.1"
-api-utils = { path = "api/", develop = false }
-awsebcli = "^3.20.6"
+loguru = "^0.7.0"
+api-utils = { path = "api-package/", develop = false }
 
 [tool.poetry.group.dev.dependencies]
 ipykernel = "^6.23.1"
