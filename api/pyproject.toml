@@ -1,0 +1,17 @@
+[tool.poetry]
+name = "api-utils"
+version = "2.0.0"
+description = ""
+authors = ["Federico Trifoglio <federico.trifoglio@assemblyglobal.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+fastapi = "^0.95.2"
+pydantic = "^1.10.8"
+pandas = "^2.0.1"
+titanic-model = { path = "../model/", develop = false }
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

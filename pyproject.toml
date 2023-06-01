@@ -1,0 +1,25 @@
+[tool.poetry]
+name = "fastapi-demo"
+version = "1.0.0"
+description = "Simple application with API endpoints to interact with machine learning models trained on the Titanic dataset."
+authors = ["Federico Trifoglio <federico.trifoglio@assemblyglobal.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = "^3.11"
+uvicorn = {extras = ["standard"], version = "^0.22.0"}
+requests = "^2.20.1"
+api-utils = { path = "api/", develop = false }
+awsebcli = "^3.20.6"
+
+[tool.poetry.group.dev.dependencies]
+ipykernel = "^6.23.1"
+black = "^22.8.0"
+toml = "^0.10.2"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line_length = 88

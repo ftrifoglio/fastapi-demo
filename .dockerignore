@@ -1,0 +1,14 @@
+.git
+.gitignore
+.poetry
+.venv
+.vscode
+.python-version
+.elasticbeanstalk
+.github
+Makefile
+poetry.lock
+poetry.toml
+setup.cfg
+docker-compose.yml
+Dockerfile
