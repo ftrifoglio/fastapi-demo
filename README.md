@@ -10,7 +10,7 @@ There are 2 versions (`/v1` and `/v2`) each with two API endpoints: `/predict` a
 
 The app is currently (and hopefully) live on AWS ECS (Amazon Elastic Container Service)
 
-http://fastapi-demo-nlb-75e7fb7d6638b195.elb.eu-west-1.amazonaws.com
+http://fastapi-demo-nlb-ec2-cc72dbfaa6e8866d.elb.eu-west-1.amazonaws.com
 
 ## Usage
 
