@@ -1,0 +1,110 @@
+name: Deploy to ECS
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+      AWS_DEFAULT_REGION: ${{ secrets.AWS_REGION }}
+      APP_NAME: fastapi-demo-app
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Create ECR Repository if Not Exists
+        run: |
+          aws ecr describe-repositories --repository-names $APP_NAME || \
+          aws ecr create-repository --repository-name $APP_NAME
+
+      - name: Retrieve ECR Repository URI
+        run: |
+          ECR_URI=$(aws ecr describe-repositories --repository-names $APP_NAME --query 'repositories[0].repositoryUri' --output text)
+          echo "ECR_URI=${ECR_URI}" >> $GITHUB_ENV
+
+      - name: Log in to ECR
+        run: |
+          aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_URI
+
+      - name: Build Docker image
+        run: docker build -t $APP_NAME .
+
+      - name: Tag with latest
+        run: docker tag $APP_NAME:latest $ECR_URI:latest
+
+      - name: Push latest to ECR
+        run: docker push $ECR_URI:latest
+
+      - name: Set up Terraform
+        working-directory: infrastructure
+        run: terraform init
+
+      - name: Terraform Plan
+        working-directory: infrastructure
+        run: |
+          terraform plan -var-file=arguments.tfvars \
+            -var="app_name=$APP_NAME" \
+            -var="image_tag=latest" \
+            -var="ecr_repository_url=$ECR_URI" \
+            -var="aws_region=$AWS_DEFAULT_REGION"
+
+      - name: Terraform Apply
+        working-directory: infrastructure
+        run: |
+          terraform apply -auto-approve -var-file=arguments.tfvars \
+            -var="app_name=$APP_NAME" \
+            -var="image_tag=latest" \
+            -var="ecr_repository_url=$ECR_URI" \
+            -var="aws_region=$AWS_DEFAULT_REGION"
+
+      - name: Rollback to Stable on Failure
+        if: failure()
+        working-directory: infrastructure
+        run: |
+          echo "Tagging latest failed image..."
+          MANIFEST=$(aws ecr batch-get-image --repository-name $APP_NAME --image-ids imageTag=latest --output text --query 'images[].imageManifest')
+          aws ecr put-image --repository-name $APP_NAME --image-tag latest_failed --image-manifest "$MANIFEST"
+          if aws ecr describe-images --repository-name $APP_NAME --image-ids imageTag=stable > /dev/null 2>&1; then
+            echo "Rolling back to stable image..."
+            terraform apply -auto-approve -var-file=arguments.tfvars \
+              -var="app_name=$APP_NAME" \
+              -var="image_tag=stable" \
+              -var="ecr_repository_url=$ECR_URI" \
+              -var="aws_region=$AWS_DEFAULT_REGION"
+          else
+            echo "No stable image found. Destroying resources."
+            terraform destroy -auto-approve -var-file=arguments.tfvars \
+              -var="app_name=$APP_NAME" \
+              -var="image_tag=latest" \
+              -var="ecr_repository_url=$ECR_URI" \
+              -var="aws_region=$AWS_DEFAULT_REGION"
+          fi
+
+      - name: Re-tag latest to stable on Success
+        if: success()
+        run: |
+          MANIFEST=$(aws ecr batch-get-image --repository-name $APP_NAME --image-ids imageTag=latest --output text --query 'images[].imageManifest')
+          aws ecr put-image --repository-name $APP_NAME --image-tag stable --image-manifest "$MANIFEST"
+
+      - name: Remove Untagged Images from ECR
+        run: |
+          UNTAGGED_IMAGES=$(aws ecr list-images --repository-name $APP_NAME --filter "tagStatus=UNTAGGED" --query 'imageIds[*]' --output json)
+          if [[ "$UNTAGGED_IMAGES" != "[]" ]]; then
+            echo "Deleting untagged images..."
+            aws ecr batch-delete-image --repository-name $APP_NAME --image-ids "$UNTAGGED_IMAGES"
+          else
+            echo "No untagged images to delete."
+          fi
+
+      - name: Echo task public IP
+        run: |
+          TASK_ARN=$(aws ecs list-tasks --cluster ${APP_NAME}-cluster --service-name ${APP_NAME}-service --query 'taskArns[0]' --output text)
+          ENI_ID=$(aws ecs describe-tasks --cluster ${APP_NAME}-cluster --tasks $TASK_ARN --query 'tasks[0].attachments[0].details[?name==`networkInterfaceId`].value' --output text)
+          PUBLIC_IP=$(aws ec2 describe-network-interfaces --network-interface-ids $ENI_ID --query 'NetworkInterfaces[0].Association.PublicIp' --output text)
+          echo "The application is accessible at: http://$PUBLIC_IP"
